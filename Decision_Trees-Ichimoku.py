@@ -8,12 +8,18 @@ import matplotlib.pyplot as plt
 
 # Λήψη δεδομένων μετοχής από το yfinance
 symbol = 'AAPL'  # Παράδειγμα με μετοχή Apple
-start_date = '2022-01-01'
-end_date = '2023-01-01'
+start_date = '2018-11-30'
+end_date = '2023-11-30'
 data = yf.download(symbol, start=start_date, end=end_date)
 
+# Υπολογισμός στοιχείων Ichimoku
+data['Conversion_Line'] = (data['High'].rolling(window=9).max() + data['Low'].rolling(window=9).min()) / 2
+data['Base_Line'] = (data['High'].rolling(window=26).max() + data['Low'].rolling(window=26).min()) / 2
+data['Leading_Span_A'] = (data['Conversion_Line'] + data['Base_Line']) / 2
+data['Leading_Span_B'] = (data['High'].rolling(window=52).max() + data['Low'].rolling(window=52).min()) / 2
+
 # Επιλογή τιμής κλεισίματος ως χαρακτηριστικό
-features = data[['Close']]
+features = data[['Close', 'Conversion_Line', 'Base_Line', 'Leading_Span_A', 'Leading_Span_B']]
 
 # Εισαγωγή της μελλοντικής τιμής κλεισίματος ως μεταβλητή πρόβλεψης
 features['Next_Close'] = features['Close'].shift(-1)
@@ -21,12 +27,8 @@ features['Next_Close'] = features['Close'].shift(-1)
 # Αφαίρεση των τελευταίων γραμμών που περιέχουν NaN λόγω του shift
 features = features.dropna()
 
-# Υπολογισμός McGinley Dynamic
-n = 24  # Παράμετρος του McGinley Dynamic
-features['MD'] = features['Close'] / features['Close'].rolling(window=n).mean() - 1
-
 # Επιλογή των χαρακτηριστικών και της μεταβλητής πρόβλεψης
-X = features[['Close', 'MD']]
+X = features[['Close', 'Conversion_Line', 'Base_Line', 'Leading_Span_A', 'Leading_Span_B']]
 y = features['Next_Close']
 
 # Διαίρεση των δεδομένων σε σύνολα εκπαίδευσης και ελέγχου

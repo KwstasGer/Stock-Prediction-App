@@ -8,18 +8,12 @@ import matplotlib.pyplot as plt
 
 # Λήψη δεδομένων μετοχής από το yfinance
 symbol = 'AAPL'  # Παράδειγμα με μετοχή Apple
-start_date = '2022-01-01'
-end_date = '2023-01-01'
+start_date = '2018-11-30'
+end_date = '2023-11-30'
 data = yf.download(symbol, start=start_date, end=end_date)
 
 # Επιλογή τιμής κλεισίματος ως χαρακτηριστικό
 features = data[['Close']]
-
-# Υπολογισμός Bollinger Bands
-window = 20
-features['Rolling Mean'] = features['Close'].rolling(window=window).mean()
-features['Upper Band'] = features['Rolling Mean'] + 2 * features['Close'].rolling(window=window).std()
-features['Lower Band'] = features['Rolling Mean'] - 2 * features['Close'].rolling(window=window).std()
 
 # Εισαγωγή της μελλοντικής τιμής κλεισίματος ως μεταβλητή πρόβλεψης
 features['Next_Close'] = features['Close'].shift(-1)
@@ -27,12 +21,18 @@ features['Next_Close'] = features['Close'].shift(-1)
 # Αφαίρεση των τελευταίων γραμμών που περιέχουν NaN λόγω του shift
 features = features.dropna()
 
+# Υπολογισμός McGinley Dynamic
+n = 24  # Παράμετρος του McGinley Dynamic
+features['MD'] = features['Close'] / \
+    features['Close'].rolling(window=n).mean() - 1
+
 # Επιλογή των χαρακτηριστικών και της μεταβλητής πρόβλεψης
-X = features[['Close', 'Rolling Mean', 'Upper Band', 'Lower Band']]
+X = features[['Close', 'MD']]
 y = features['Next_Close']
 
 # Διαίρεση των δεδομένων σε σύνολα εκπαίδευσης και ελέγχου
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42)
 
 # Δημιουργία και εκπαίδευση του μοντέλου Δέντρα Απόφασης
 model = DecisionTreeRegressor()

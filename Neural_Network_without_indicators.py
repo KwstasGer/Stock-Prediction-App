@@ -1,4 +1,4 @@
-#Neyronika diktya
+# Neyronika diktya
 
 import yfinance as yf
 import pandas as pd
@@ -13,8 +13,8 @@ from matplotlib import pyplot as plt
 
 # Λήψη δεδομένων μετοχής από το yfinance
 symbol = 'AAPL'  # Παράδειγμα με μετοχή Apple
-start_date = '2022-01-01'
-end_date = '2023-01-01'
+start_date = '2018-11-30'
+end_date = '2023-11-30'
 data = yf.download(symbol, start=start_date, end=end_date)
 
 # Επιλογή τιμής κλεισίματος ως χαρακτηριστικό
@@ -33,11 +33,13 @@ for i in range(len(features_scaled) - look_back):
 
 X, y = np.array(X), np.array(y)
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42)
 
 # Δημιουργία και εκπαίδευση του μοντέλου νευρωνικού δικτύου
 model = Sequential()
-model.add(LSTM(units=50, return_sequences=True, input_shape=(X_train.shape[1], 1)))
+model.add(LSTM(units=50, return_sequences=True,
+          input_shape=(X_train.shape[1], 1)))
 model.add(LSTM(units=50))
 model.add(Dense(units=1))
 model.compile(optimizer='adam', loss='mean_squared_error')
@@ -52,7 +54,8 @@ mse = mean_squared_error(features[-len(y_test):], predictions)
 print(f'Mean Squared Error: {mse}')
 
 # Παρουσίαση των πραγματικών τιμών και των προβλέψεων
-plt.plot(features.index[-len(y_test):], features[-len(y_test):], label='Πραγματικές τιμές')
+plt.plot(features.index[-len(y_test):],
+         features[-len(y_test):], label='Πραγματικές τιμές')
 plt.plot(features.index[-len(y_test):], predictions, label='Προβλέψεις')
 plt.xlabel('Ημερομηνία')
 plt.ylabel('Τιμή Κλεισίματος')

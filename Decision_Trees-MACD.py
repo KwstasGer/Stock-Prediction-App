@@ -8,8 +8,8 @@ from ta.trend import MACD
 
 # Λήψη δεδομένων μετοχής από το yfinance
 symbol = 'AAPL'  # Παράδειγμα με μετοχή Apple
-start_date = '2022-01-01'
-end_date = '2023-01-01'
+start_date = '2018-11-30'
+end_date = '2023-11-30'
 data = yf.download(symbol, start=start_date, end=end_date)
 
 # Υπολογισμός δείκτη MACD

@@ -1,3 +1,5 @@
+# algorithmos dentrwn apofasis
+
 import yfinance as yf
 import pandas as pd
 import numpy as np
@@ -8,18 +10,12 @@ import matplotlib.pyplot as plt
 
 # Λήψη δεδομένων μετοχής από το yfinance
 symbol = 'AAPL'  # Παράδειγμα με μετοχή Apple
-start_date = '2022-01-01'
-end_date = '2023-01-01'
+start_date = '2018-11-30'
+end_date = '2023-11-30'
 data = yf.download(symbol, start=start_date, end=end_date)
 
-# Υπολογισμός στοιχείων Ichimoku
-data['Conversion_Line'] = (data['High'].rolling(window=9).max() + data['Low'].rolling(window=9).min()) / 2
-data['Base_Line'] = (data['High'].rolling(window=26).max() + data['Low'].rolling(window=26).min()) / 2
-data['Leading_Span_A'] = (data['Conversion_Line'] + data['Base_Line']) / 2
-data['Leading_Span_B'] = (data['High'].rolling(window=52).max() + data['Low'].rolling(window=52).min()) / 2
-
 # Επιλογή τιμής κλεισίματος ως χαρακτηριστικό
-features = data[['Close', 'Conversion_Line', 'Base_Line', 'Leading_Span_A', 'Leading_Span_B']]
+features = data[['Close']]
 
 # Εισαγωγή της μελλοντικής τιμής κλεισίματος ως μεταβλητή πρόβλεψης
 features['Next_Close'] = features['Close'].shift(-1)
@@ -28,11 +24,12 @@ features['Next_Close'] = features['Close'].shift(-1)
 features = features.dropna()
 
 # Επιλογή των χαρακτηριστικών και της μεταβλητής πρόβλεψης
-X = features[['Close', 'Conversion_Line', 'Base_Line', 'Leading_Span_A', 'Leading_Span_B']]
+X = features[['Close']]
 y = features['Next_Close']
 
 # Διαίρεση των δεδομένων σε σύνολα εκπαίδευσης και ελέγχου
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42)
 
 # Δημιουργία και εκπαίδευση του μοντέλου Δέντρα Απόφασης
 model = DecisionTreeRegressor()
@@ -46,8 +43,8 @@ mse = mean_squared_error(y_test, predictions)
 print(f'Mean Squared Error: {mse}')
 
 # Παρουσίαση των πραγματικών τιμών και των προβλέψεων
-plt.scatter(X_test['Close'], y_test, color='black', label='Πραγματικές τιμές')
-plt.scatter(X_test['Close'], predictions, color='blue', label='Προβλέψεις')
+plt.scatter(X_test, y_test, color='black', label='Πραγματικές τιμές')
+plt.scatter(X_test, predictions, color='blue', label='Προβλέψεις')
 plt.xlabel('Τιμή Κλεισίματος')
 plt.ylabel('Επόμενη Τιμή Κλεισίματος')
 plt.title('Πραγματικές τιμές vs Προβλέψεις')

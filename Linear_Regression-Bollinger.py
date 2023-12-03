@@ -9,9 +9,9 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error
 import numpy as np
 
 # Λήψη δεδομένων από το χρηματιστήριο
-symbol = 'AAPL'
-start_date = '2022-01-01'
-end_date = '2023-01-01'
+symbol = 'AAPL'  # Παράδειγμα με μετοχή Apple
+start_date = '2018-11-30'
+end_date = '2023-11-30'
 data = yf.download(symbol, start=start_date, end=end_date)
 
 # Καθαρισμός και επεξεργασία δεδομένων
@@ -35,7 +35,8 @@ data.dropna(inplace=True)
 # Διαχωρισμός σε σετ εκπαίδευσης και δοκιμής
 X = data[['Previous_Close', 'Overbought', 'Oversold']]
 y = data['Close']
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=0)
 
 # Εκπαίδευση του μοντέλου
 model = LinearRegression()
@@ -51,12 +52,14 @@ print(f'MSE: {mse}')
 print(f'MAE: {mae}')
 
 # Οπτικοποίηση των προβλέψεων
-plt.scatter(X_test['Previous_Close'], y_test, color='black', label='Πραγματικές τιμές')
-plt.scatter(X_test['Previous_Close'], predictions, color='blue', label='Προβλέψεις')
-#plt.scatter(X_test['Overbought'], y_test, color='red', label='Πραγματικές τιμές (Overbought)')
-#plt.scatter(X_test['Overbought'], predictions, color='green', label='Προβλέψεις (Overbought)')
-#plt.scatter(X_test['Oversold'], y_test, color='purple', label='Πραγματικές τιμές (Oversold)')
-#plt.scatter(X_test['Oversold'], predictions, color='orange', label='Προβλέψεις (Oversold)')
+plt.scatter(X_test['Previous_Close'], y_test,
+            color='black', label='Πραγματικές τιμές')
+plt.scatter(X_test['Previous_Close'], predictions,
+            color='blue', label='Προβλέψεις')
+# plt.scatter(X_test['Overbought'], y_test, color='red', label='Πραγματικές τιμές (Overbought)')
+# plt.scatter(X_test['Overbought'], predictions, color='green', label='Προβλέψεις (Overbought)')
+# plt.scatter(X_test['Oversold'], y_test, color='purple', label='Πραγματικές τιμές (Oversold)')
+# plt.scatter(X_test['Oversold'], predictions, color='orange', label='Προβλέψεις (Oversold)')
 plt.xlabel('Τιμή Κλεισίματος Προηγούμενης Ημέρας / Bollinger Bands')
 plt.ylabel('Τιμή Κλεισίματος')
 plt.title('Πραγματικές τιμές vs Προβλέψεις')
