@@ -137,6 +137,3 @@ plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
 plt.gca().xaxis.set_major_locator(mdates.MonthLocator(interval=6)) 
 
 plt.show()
-
-
-
