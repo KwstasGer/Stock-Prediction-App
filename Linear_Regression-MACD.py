@@ -8,7 +8,7 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error
 import talib
 
 # Λήψη δεδομένων από το χρηματιστήριο
-symbol = 'AAPL'  # Παράδειγμα με μετοχή Apple
+symbol = 'AMZN'  # Παράδειγμα με μετοχή Amazon
 start_date = '2018-11-30'
 end_date = '2023-11-30'
 data = yf.download(symbol, start=start_date, end=end_date)
