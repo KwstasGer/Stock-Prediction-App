@@ -12,7 +12,7 @@ from tensorflow.keras.layers import Dense, LSTM
 from matplotlib import pyplot as plt
 
 # Λήψη δεδομένων μετοχής από το yfinance
-symbol = 'AAPL'  # Παράδειγμα με μετοχή Apple
+symbol = 'AMZN'  # Παράδειγμα με μετοχή Amazon
 start_date = '2018-11-30'
 end_date = '2023-11-30'
 data = yf.download(symbol, start=start_date, end=end_date)

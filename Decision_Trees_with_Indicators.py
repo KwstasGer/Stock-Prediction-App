@@ -6,6 +6,9 @@ from sklearn.tree import DecisionTreeRegressor
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+from ta.trend import MACD
+from ta.volatility import BollingerBands
+from ta.momentum import RSI
 
 
 # Λήψη δεδομένων μετοχής από το yfinance
@@ -19,7 +22,14 @@ df.dropna(inplace=True)  # Αφαίρεση γραμμών με NaN
 
 # Προετοιμασία δεδομένων
 df['Date'] = df.index
-X = df[['Open', 'High', 'Low', 'Volume', 'Adj Close']]
+
+# Προσθήκη των δεικτών MACD, Bollinger Bands και RSI
+df['MACD'] = MACD(df['Close']).macd()
+df['Bollinger_Upper'] = BollingerBands(df['Close']).bollinger_hband()
+df['Bollinger_Lower'] = BollingerBands(df['Close']).bollinger_lband()
+df['RSI'] = RSI(df['Close']).rsi()
+
+X = df[['Open', 'High', 'Low', 'Volume', 'Adj Close', 'MACD', 'Bollinger_Upper', 'Bollinger_Lower', 'RSI']]
 y = df['Close']
 
 
@@ -51,7 +61,7 @@ print(f"Mean Absolute Error (MAE): {mae}")
 
 
 # Παρουσίαση αποτελεσμάτων
-plt.figure(figsize=(10,6))
+plt.figure(figsize=(10, 6))
 plt.gca().xaxis.set_major_locator(mdates.MonthLocator(interval=6))
 plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
 plt.plot(df.index, df['Close'], label='Πραγματικές Τιμές', color='blue', linewidth=2)
@@ -67,8 +77,8 @@ plt.show()
 
 
 # Υπολογίζουμε το μέσο όρο και την τυπική απόκλιση των τελευταίων 30 ημερών για τα features
-mean_values = df[['Open', 'High', 'Low', 'Volume', 'Adj Close']].tail(30).mean()
-std_values = df[['Open', 'High', 'Low', 'Volume', 'Adj Close']].tail(30).std()
+mean_values = df[['Open', 'High', 'Low', 'Volume', 'Adj Close', 'MACD', 'Bollinger_Upper', 'Bollinger_Lower', 'RSI']].tail(30).mean()
+std_values = df[['Open', 'High', 'Low', 'Volume', 'Adj Close', 'MACD', 'Bollinger_Upper', 'Bollinger_Lower', 'RSI']].tail(30).std()
 
 # Προσδιορίζουμε την τελευταία ημερομηνία των δεδομένων
 last_date = df.index[-1]
@@ -81,8 +91,14 @@ future_df = pd.DataFrame(index=future_dates)
 for feature in mean_values.index:
     future_df[feature] = mean_values[feature] + np.random.normal(0, std_values[feature], size=len(future_dates))
 
+# Προσθήκη των δεικτών MACD, Bollinger Bands και RSI στα μελλοντικά δεδομένα
+future_df['MACD'] = MACD(future_df['Adj Close']).macd()
+future_df['Bollinger_Upper'] = BollingerBands(future_df['Adj Close']).bollinger_hband()
+future_df['Bollinger_Lower'] = BollingerBands(future_df['Adj Close']).bollinger_lband()
+future_df['RSI'] = RSI(future_df['Adj Close']).rsi()
+
 # Κάνουμε προβλέψεις χρησιμοποιώντας το μοντέλο
-future_predictions = model.predict(future_df[['Open', 'High', 'Low', 'Volume', 'Adj Close']])
+future_predictions = model.predict(future_df[['Open', 'High', 'Low', 'Volume', 'Adj Close', 'MACD', 'Bollinger_Upper', 'Bollinger_Lower', 'RSI']])
 
 # Εκτυπώνουμε τις προβλέψεις
 future_df['Predictions'] = future_predictions
@@ -106,7 +122,7 @@ plt.plot(future_df.index, future_df['Predictions'], label='Προβλεπόμε�
 
 plt.xlabel('Ημερομηνία')
 plt.ylabel('Τιμή')
-plt.title('Πρόβλεψη τιμής για την μετοχή της Amazon με Προσομοίωση Μελλοντικών Δεδομένων')
+plt.title('Πρόβλεψη τιμής για την μετοχή της Amazon με Decision Tree και Δείκτες')
 plt.legend()
 plt.xticks(rotation=45)
 plt.tight_layout()
