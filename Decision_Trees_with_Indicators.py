@@ -1,129 +1,124 @@
 import yfinance as yf
 import pandas as pd
-import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.tree import DecisionTreeRegressor
-from sklearn.metrics import mean_squared_error, mean_absolute_error
+from sklearn.metrics import mean_squared_error
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-from ta.trend import MACD
-from ta.volatility import BollingerBands
-from ta.momentum import RSI
 
-
-# Λήψη δεδομένων μετοχής από το yfinance
-symbol = 'AMZN'  # Παράδειγμα με μετοχή Amazon
+# Λήψη δεδομένων
+symbol = 'AMZN'
 start_date = '2018-11-30'
 end_date = '2023-11-30'
 df = yf.download(symbol, start=start_date, end=end_date)
 
+# Καθαρισμός και επεξεργασία δεδομένων
+df.dropna(inplace=True)
+df['Return'] = df['Close'].pct_change()
+df = df.reset_index()
+df['Date'] = pd.to_datetime(df['Date'])
 
-df.dropna(inplace=True)  # Αφαίρεση γραμμών με NaN
+# Συνάρτηση για υπολογισμό RSI
 
-# Προετοιμασία δεδομένων
-df['Date'] = df.index
 
-# Προσθήκη των δεικτών MACD, Bollinger Bands και RSI
-df['MACD'] = MACD(df['Close']).macd()
-df['Bollinger_Upper'] = BollingerBands(df['Close']).bollinger_hband()
-df['Bollinger_Lower'] = BollingerBands(df['Close']).bollinger_lband()
-df['RSI'] = RSI(df['Close']).rsi()
+def calculate_rsi(data, column_name, period=14):
+    delta = data[column_name].diff(1)
+    gain = delta.where(delta > 0, 0)
+    loss = -delta.where(delta < 0, 0)
+    avg_gain = gain.rolling(window=period, min_periods=1).mean()
+    avg_loss = loss.rolling(window=period, min_periods=1).mean()
+    rs = avg_gain / avg_loss
+    rsi = 100 - (100 / (1 + rs))
+    return rsi
 
-X = df[['Open', 'High', 'Low', 'Volume', 'Adj Close', 'MACD', 'Bollinger_Upper', 'Bollinger_Lower', 'RSI']]
+# Συνάρτηση για υπολογισμό MACD
+
+
+def calculate_macd(data, column_name, short_window=12, long_window=26, signal_window=9):
+    short_ema = data[column_name].ewm(span=short_window, adjust=False).mean()
+    long_ema = data[column_name].ewm(span=long_window, adjust=False).mean()
+    data['MACD'] = short_ema - long_ema
+    data['Signal_Line'] = data['MACD'].ewm(
+        span=signal_window, adjust=False).mean()
+    return data
+
+# Συνάρτηση για υπολογισμό Bollinger Bands
+
+
+def calculate_bollinger_bands(data, column_name, window=20, num_std=2):
+    data['Rolling_Mean'] = data[column_name].rolling(
+        window=window, min_periods=1).mean()
+    data['Upper_Band'] = data['Rolling_Mean'] + \
+        (data[column_name].rolling(window=window, min_periods=1).std() * num_std)
+    data['Lower_Band'] = data['Rolling_Mean'] - \
+        (data[column_name].rolling(window=window, min_periods=1).std() * num_std)
+    return data
+
+
+# Προσθήκη δεικτών RSI, MACD και Bollinger Bands
+df['RSI'] = calculate_rsi(df, 'Close')
+df = calculate_macd(df, 'Close')
+df = calculate_bollinger_bands(df, 'Close')
+
+# Δημιουργία μεταβλητών για το μοντέλο μηχανικής μάθησης
+df['Previous_Close'] = df['Close'].shift(1)
+df.dropna(inplace=True)
+
+# Διαχωρισμός σε σετ εκπαίδευσης και δοκιμής
+X = df[['Date', 'Previous_Close']]
 y = df['Close']
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42, shuffle=False)
 
+# Εκπαίδευση μοντέλου
+model = DecisionTreeRegressor()
+model.fit(X_train.drop('Date', axis=1), y_train)
 
-# Διαχωρισμός σε train και test set
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+# Πρόβλεψη τιμών
+predictions = model.predict(X_test.drop('Date', axis=1))
 
-
-# Δημιουργία και εκπαίδευση μοντέλου
-model = DecisionTreeRegressor(random_state=42)
-model.fit(X_train, y_train)
-
-
-# Υπολογισμός της πρόβλεψης
-predictions = model.predict(X_test)
-
-
-# Σορτάρισμα των δεδομένων για την εμφάνιση των προβλέψεων
-test_data_sorted = X_test.copy()
-test_data_sorted['Predictions'] = predictions
-test_data_sorted = test_data_sorted.sort_index()
-
-
-# Αξιολόγηση του μοντέλου με τις μετρικές MSE και MAE
+# Αξιολόγηση μοντέλου
 mse = mean_squared_error(y_test, predictions)
-mae = mean_absolute_error(y_test, predictions)
+print(f'Mean Squared Error: {mse}')
 
-print(f"Mean Squared Error (MSE): {mse}")
-print(f"Mean Absolute Error (MAE): {mae}")
-
-
-# Παρουσίαση αποτελεσμάτων
-plt.figure(figsize=(10, 6))
-plt.gca().xaxis.set_major_locator(mdates.MonthLocator(interval=6))
-plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
-plt.plot(df.index, df['Close'], label='Πραγματικές Τιμές', color='blue', linewidth=2)
-plt.scatter(test_data_sorted.index, test_data_sorted['Predictions'], label='Προβλεπόμενες Τιμές', color='orange', s=10)
+# Σχεδίαση ιστορικής εξέλιξης τιμής, δεικτών και προβλεπόμενων τιμών
+plt.figure(figsize=(12, 6))
+plt.plot(df['Date'], df['Close'], label='Τιμή Κλεισίματος')
+plt.title('Ιστορική Εξέλιξη Τιμής Κλεισίματος')
 plt.xlabel('Ημερομηνία')
-plt.ylabel('Τιμή')
-plt.title('Πρόβλεψη τιμής για την μετοχή της Amazon με Decision Tree')
+plt.ylabel('Τιμή Κλεισίματος')
 plt.legend()
-plt.xticks(rotation=45)
-plt.tight_layout() 
+plt.gcf().autofmt_xdate()
+plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
+plt.gca().xaxis.set_major_locator(mdates.MonthLocator(bymonth=(1, 7)))
 plt.show()
 
-
-
-# Υπολογίζουμε το μέσο όρο και την τυπική απόκλιση των τελευταίων 30 ημερών για τα features
-mean_values = df[['Open', 'High', 'Low', 'Volume', 'Adj Close', 'MACD', 'Bollinger_Upper', 'Bollinger_Lower', 'RSI']].tail(30).mean()
-std_values = df[['Open', 'High', 'Low', 'Volume', 'Adj Close', 'MACD', 'Bollinger_Upper', 'Bollinger_Lower', 'RSI']].tail(30).std()
-
-# Προσδιορίζουμε την τελευταία ημερομηνία των δεδομένων
-last_date = df.index[-1]
-
-# Δημιουργούμε ένα νέο DataFrame για τις μελλοντικές ημερομηνίες
-future_dates = pd.date_range(start=last_date, periods=30, freq='D')
-future_df = pd.DataFrame(index=future_dates)
-
-# Προσθέτουμε τυχαία διακύμανση στις μέσες τιμές για κάθε feature
-for feature in mean_values.index:
-    future_df[feature] = mean_values[feature] + np.random.normal(0, std_values[feature], size=len(future_dates))
-
-# Προσθήκη των δεικτών MACD, Bollinger Bands και RSI στα μελλοντικά δεδομένα
-future_df['MACD'] = MACD(future_df['Adj Close']).macd()
-future_df['Bollinger_Upper'] = BollingerBands(future_df['Adj Close']).bollinger_hband()
-future_df['Bollinger_Lower'] = BollingerBands(future_df['Adj Close']).bollinger_lband()
-future_df['RSI'] = RSI(future_df['Adj Close']).rsi()
-
-# Κάνουμε προβλέψεις χρησιμοποιώντας το μοντέλο
-future_predictions = model.predict(future_df[['Open', 'High', 'Low', 'Volume', 'Adj Close', 'MACD', 'Bollinger_Upper', 'Bollinger_Lower', 'RSI']])
-
-# Εκτυπώνουμε τις προβλέψεις
-future_df['Predictions'] = future_predictions
-
-
-
-# Ρυθμίζουμε τον οριζόντιο άξονα (x-axis) για να εμφανίζει ημερομηνίες κάθε έξι μήνες
-locator = mdates.MonthLocator(interval=6)
-formatter = mdates.DateFormatter('%Y-%m')
-
-# Δημιουργία του διαγράμματος
-plt.figure(figsize=(14, 7))
-plt.gca().xaxis.set_major_locator(locator)
-plt.gca().xaxis.set_major_formatter(formatter)
-
-# Πραγματικές τιμές
-plt.plot(df.index, df['Close'], label='Πραγματικές Τιμές', color='blue')
-
-# Προβλεπόμενες τιμές για το μέλλον
-plt.plot(future_df.index, future_df['Predictions'], label='Προβλεπόμενες Τιμές', color='orange', linestyle='--')
-
-plt.xlabel('Ημερομηνία')
-plt.ylabel('Τιμή')
-plt.title('Πρόβλεψη τιμής για την μετοχή της Amazon με Decision Tree και Δείκτες')
+# RSI
+plt.subplot(3, 1, 1)
+plt.plot(df['Date'], df['RSI'], label='RSI', color='purple')
+plt.axhline(y=70, color='r', linestyle='--', label='Overbought (70)')
+plt.axhline(y=30, color='g', linestyle='--', label='Oversold (30)')
+plt.title('Relative Strength Index (RSI)')
 plt.legend()
-plt.xticks(rotation=45)
+
+# MACD
+plt.subplot(3, 1, 2)
+plt.plot(df['Date'], df['MACD'], label='MACD', color='blue')
+plt.plot(df['Date'], df['Signal_Line'], label='Signal Line', color='orange')
+plt.title('MACD (Moving Average Convergence Divergence)')
+plt.legend()
+
+# Bollinger Bands
+plt.subplot(3, 1, 3)
+plt.plot(df['Date'], df['Close'], label='Τιμή Κλεισίματος')
+plt.plot(df['Date'], df['Upper_Band'], label='Upper Band', color='red')
+plt.plot(df['Date'], df['Lower_Band'], label='Lower Band', color='green')
+plt.fill_between(df['Date'], df['Upper_Band'], df['Lower_Band'],
+                 color='lightgray', alpha=0.4, label='Bollinger Bands')
+plt.title('Bollinger Bands')
+plt.xlabel('Ημερομηνία')
+plt.ylabel('Τιμή Κλεισίματος')
+plt.legend()
+
 plt.tight_layout()
 plt.show()
