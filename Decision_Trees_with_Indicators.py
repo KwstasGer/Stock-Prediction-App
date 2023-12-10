@@ -122,3 +122,18 @@ plt.legend()
 
 plt.tight_layout()
 plt.show()
+
+# Εμφάνιση πραγματικών και προβλεπόμενων τιμών
+plt.figure(figsize=(12, 6))
+plt.plot(X_test['Date'], y_test, color='blue', label='Πραγματικές τιμές')
+plt.plot(X_test['Date'], predictions,
+         color='orange', label='Προβλεπόμενες τιμές')
+plt.title('Πραγματικές και προβλεπόμενες τιμές της μετοχής Amazon')
+plt.xlabel('Ημερομηνία')
+plt.ylabel('Τιμή Μετοχής')
+plt.legend()
+plt.gcf().autofmt_xdate()
+plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
+plt.gca().xaxis.set_major_locator(mdates.MonthLocator(interval=6))
+
+plt.show()
